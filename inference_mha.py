@@ -4,7 +4,7 @@ import torch
 import pyvene as pv
 import argparse
 from tqdm.auto import tqdm
-from utils import generate_and_decode_new_tokens 
+from probe.utils import generate_and_decode_new_tokens 
 
 def get_top_k_keys(accuracy_dict, k=16):
     """
@@ -102,9 +102,10 @@ def main():
                                       )
     
     print("Setting up intervention components")
-    if model_id == 'gemma-3':
+    if 'gemma' in model_id.lower():
+        # Gemma3ForConditionalGeneration: model.model.language_model.layers
         target_components = [{
-                "component": f"language_model.layers[{i}].self_attn.o_proj.input",
+                "component": f"model.language_model.layers[{i}].self_attn.o_proj.input",
                 "intervention": pv.AdditionIntervention(
                     source_representation=linear_probes[i].to("cuda")
                 )

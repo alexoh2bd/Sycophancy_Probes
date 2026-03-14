@@ -1,5 +1,8 @@
 from transformers import AutoProcessor, AutoModelForCausalLM, AutoTokenizer, Gemma3ForConditionalGeneration
 from datasets import load_dataset
+import os
+
+ep_data_path = os.path.join(os.getcwd(), "epistemic-integrity","scibert-finetuning","data")
 
 def load_test_data(dataset_id):
     if dataset_id == 'truthfulqa':
@@ -26,6 +29,11 @@ def load_test_data(dataset_id):
         questions_test = ds['question']
         correct_answers_idxs = ds['answerKey']
         correct_answers_test = [x['text'][x['label'].index(ans_key)] for ans_key, x in zip(correct_answers_idxs, ds['choices'])]
+    elif dataset_id == "epistemic_integrity":
+        ds = load_dataset("csv", os.path.join(ep_data_path,"test_data.csv"))
+        prompts = ds_test['text']
+        assertiveness = [float(x) for x in ds_test['asservieness']]
+        return prompts, assertiveness
     else:
         raise('Dataset not supported')
     return questions_test, correct_answers_test
