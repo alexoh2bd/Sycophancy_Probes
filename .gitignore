@@ -148,3 +148,9 @@ predictions_truthful
 !.pixi/config.toml
 __pycache__
 
+
+/wandb
+/log
+-e
+e*
+/logs

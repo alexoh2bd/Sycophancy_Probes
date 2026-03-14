@@ -2,7 +2,6 @@ from transformers import AutoProcessor, AutoModelForCausalLM, AutoTokenizer, Gem
 from datasets import load_dataset
 import os
 
-ep_data_path = os.path.join(os.getcwd(), "epistemic-integrity","scibert-finetuning","data")
 
 def load_test_data(dataset_id):
     if dataset_id == 'truthfulqa':
@@ -29,14 +28,18 @@ def load_test_data(dataset_id):
         questions_test = ds['question']
         correct_answers_idxs = ds['answerKey']
         correct_answers_test = [x['text'][x['label'].index(ans_key)] for ans_key, x in zip(correct_answers_idxs, ds['choices'])]
-    elif dataset_id == "epistemic_integrity":
-        ds = load_dataset("csv", os.path.join(ep_data_path,"test_data.csv"))
-        prompts = ds_test['text']
-        assertiveness = [float(x) for x in ds_test['asservieness']]
-        return prompts, assertiveness
     else:
         raise('Dataset not supported')
     return questions_test, correct_answers_test
+
+
+def load_ep_data(split="train", ep_data_path=os.path.join(os.getcwd(), "epistemic-integrity", "scibert-finetuning", "data")):
+    if split == "train":
+        ds = load_dataset("csv", data_files=os.path.join(ep_data_path, "train_data.csv"))
+    else:
+        ds = load_dataset("csv", data_files=os.path.join(ep_data_path, "test_data.csv"))
+    # Single CSV yields DatasetDict with "train" split; return the Dataset for direct column access
+    return ds["train"]
 
 def load_model(model_id):
     if 'gemma-3' == model_id:
