@@ -25,6 +25,7 @@ an answer, not just at the question.
 
 import torch
 from tqdm.auto import tqdm
+import pandas as pd
 
 
 def get_model_answer(
@@ -156,5 +157,108 @@ def construct_correctness_data(
 
     if n_correct == 0 or n_incorrect == 0:
         print("WARNING: one class is empty. Check is_correct() matching logic.")
+
+    return chats, labels
+
+
+"""Builds (chats, labels) for Step 2 — the suppression probe.
+ 
+Labels:
+    1 = "miscalibrated"  — model is uncertain (low sampling accuracy)
+                           BUT answer sounds confident
+    0 = "calibrated"     — model is uncertain (low sampling accuracy)
+                           AND answer sounds hedged
+ 
+Your partner provides a CSV with columns:
+    question, accuracy, answer, assertiveness_score
+ 
+Where:
+    accuracy          = fraction of N samples that were correct (0.0–1.0)
+    answer            = the modal/representative answer text
+    assertiveness_score = score from the epistemic integrity scorer (0–10)
+ 
+We keep only rows where accuracy < uncertainty_threshold
+(the model is genuinely uncertain — these are the interesting cases)
+then split on assertiveness_score.
+ 
+The chat format matches probe_data_utils.py exactly — same to_message()
+structure so train.py's tokenization works identically.
+"""
+
+
+def construct_suppression_data(
+    scored_csv_path: str,
+    uncertainty_threshold: float = 0.5,
+    assertiveness_threshold: float = 5.0,
+) -> tuple[list, list]:
+    """
+    Parameters
+    ----------
+    scored_csv_path : str
+        Path to the CSV your partner produces.
+        Required columns: question, accuracy, answer, assertiveness_score
+
+    uncertainty_threshold : float
+        Keep only rows where accuracy < this value.
+        0.5 means "model gets it right less than half the time" = uncertain.
+        Adjust based on your data distribution.
+
+    assertiveness_threshold : float
+        Split uncertain examples:
+            assertiveness_score >= threshold → label 1 (miscalibrated)
+            assertiveness_score <  threshold → label 0 (calibrated)
+
+    Returns
+    -------
+    chats  : list of chat dicts  — same format as construct_data() returns
+    labels : list of int         — 1 = miscalibrated, 0 = calibrated
+    """
+    df = pd.read_csv(scored_csv_path)
+
+    required = {"question", "accuracy", "answer", "assertiveness_score"}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(f"CSV missing columns: {missing}")
+
+    # keep only uncertain examples
+    uncertain = df[df["accuracy"] < uncertainty_threshold].copy()
+    print(f"Total examples: {len(df)}")
+    print(f"Uncertain (accuracy < {uncertainty_threshold}): {len(uncertain)}")
+    print(f"Dropped (model was confident): {len(df) - len(uncertain)}")
+
+    chats = []
+    labels = []
+
+    for _, row in uncertain.iterrows():
+        question = row["question"]
+        answer = row["answer"]
+
+        # build chat in the same format as probe_data_utils.to_message()
+        # using the 'truthful' template since it's the simplest —
+        # just question + answer, no challenge turn needed
+        chat = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": question},
+            {"role": "assistant", "content": answer},
+        ]
+
+        chats.append(chat)
+
+        if row["assertiveness_score"] >= assertiveness_threshold:
+            labels.append(1)  # miscalibrated — uncertain inside, confident outside
+        else:
+            labels.append(0)  # calibrated    — uncertain inside, hedged outside
+
+    n_misc = sum(labels)
+    n_cal = len(labels) - n_misc
+    print(f"\nMiscalibrated (label 1): {n_misc}")
+    print(f"Calibrated    (label 0): {n_cal}")
+    print(f"Class balance: {n_misc/max(len(labels),1):.1%} miscalibrated")
+
+    if n_misc == 0 or n_cal == 0:
+        print("WARNING: one class is empty.")
+        print("  If all miscalibrated: lower assertiveness_threshold")
+        print("  If all calibrated:    raise assertiveness_threshold")
+        print("  If too few examples:  raise uncertainty_threshold")
 
     return chats, labels

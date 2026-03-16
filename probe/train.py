@@ -23,7 +23,10 @@ from utils import load_model
 
 # Assuming these utils are in the same directory or accessible via PYTHONPATH
 import probe_data_utils as probe_data_utils
-from uncertainty_data_utils import construct_correctness_data
+from uncertainty_data_utils import (
+    construct_correctness_data,
+    construct_suppression_data,
+)
 import extract_activation
 from probe import LinearProbe, NonLinearProbe
 from probe_data_utils import construct_data
@@ -264,9 +267,18 @@ def main(args):
         chats, labels = construct_correctness_data(
             ds_train, model=model, processor=processor
         )
+    elif args.concept == "suppression":
+        if not args.scored_csv:
+            raise ValueError("--scored_csv required for --concept suppression")
+        chats, labels = construct_suppression_data(
+            args.scored_csv,
+            uncertainty_threshold=args.uncertainty_threshold,
+            assertiveness_threshold=args.assertiveness_threshold,
+        )
+        numerical_labels = torch.tensor(labels)
     else:
         raise ("Direction/concept not supported")
-
+    # might have to go in else statement?
     label_encoder = LabelEncoder()
     labels = label_encoder.fit_transform(labels)
     numerical_labels = torch.tensor(labels)
@@ -335,7 +347,8 @@ def main(args):
         )
 
     if args.activation_type == "mha":
-        for layer in range(NUM_LAYERS):
+        layer_end = args.layer_end if args.layer_end is not None else NUM_LAYERS - 1
+        for layer in range(args.layer_start, layer_end + 1):
             for head in range(NUM_HEADS):
                 target_component = f"{layer}_{head}"
                 step_offset = (layer * NUM_HEADS + head) * args.epochs
@@ -445,8 +458,27 @@ if __name__ == "__main__":
             "sycophancy_hypothesis",
             "sycophancy_challenged",
             "uncertainty_correctness",
+            "suppression",
         ],
         help="Direction/concept to steer",
+    )
+    parser.add_argument(
+        "--scored_csv",
+        type=str,
+        default=None,
+        help="Path to scored csv. required for --concept suppression",
+    )
+    parser.add_argument(
+        "--uncertainty_threshold",
+        type=float,
+        default=0.5,
+        help="max sampling accuracy to keep as uncertain example",
+    )
+    parser.add_argument(
+        "--assertiveness_threshold",
+        type=float,
+        default=5.0,
+        help="Min assertiveness score to label miscalibrated",
     )
     parser.add_argument(
         "--device",
@@ -454,6 +486,19 @@ if __name__ == "__main__":
         default="cuda:0" if torch.cuda.is_available() else "cpu",
         help="Device to use ('cuda' or 'cpu').",
     )
+    parser.add_argument(
+        "--layer_start",
+        type=int,
+        default=0,
+        help="first layer to train probes at (inclusive)",
+    )
+    parser.add_argument(
+        "--layer_end",
+        type=int,
+        default=None,
+        help="last layer to train probes at (inclusive), defaults to num_layers-1",
+    )
+
     parser.add_argument(
         "--probe_type",
         type=str,
