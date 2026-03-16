@@ -22,6 +22,7 @@ from utils import load_model
 
 # Assuming these utils are in the same directory or accessible via PYTHONPATH
 import probe_data_utils as probe_data_utils
+from uncertainty_data_utils import construct_correctness_data
 import extract_activation
 from probe import LinearProbe, NonLinearProbe
 from probe_data_utils import construct_data
@@ -206,6 +207,8 @@ def main(args):
 
     if args.concept in ['truthful', 'sycophancy', 'sycophancy_challenged', 'sycophancy_hypothesis']:
         chats, labels = construct_data(ds_train, concept=args.concept) 
+    elif args.concept == 'uncertaint_correctness':
+        chats, labels = construct_correctness_data(ds_train, model = model, processor=processor)
     else:
         raise("Direction/concept not supported")
 
@@ -317,7 +320,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=25, help="Batch size for probe training.")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate for Adam optimizer.")
     parser.add_argument("--epochs", type=int, default=25, help="Number of epochs for probe training.")
-    parser.add_argument("--concept", type=str, default="sycophancy", choices=["sycophancy", "truthful", "sycophancy_hypothesis", "sycophancy_challenged"], help="Direction/concept to steer")
+    parser.add_argument("--concept", type=str, default="sycophancy", choices=["sycophancy", "truthful", "sycophancy_hypothesis", "sycophancy_challenged"], "uncertainty_correctness", help="Direction/concept to steer")
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu", help="Device to use ('cuda' or 'cpu').")
     parser.add_argument("--probe_type", type=str, default="linear", choices=["linear", "nonlinear"], help="Type of probe to use ('linear' or 'nonlinear').")
     parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging.")
