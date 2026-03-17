@@ -20,6 +20,8 @@ from datasets import load_dataset
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from utils import load_model
+from sklearn.metrics import accuracy_score, f1_score
+
 
 # Assuming these utils are in the same directory or accessible via PYTHONPATH
 import probe_data_utils as probe_data_utils
@@ -116,6 +118,7 @@ def train_probe(
     )
 
     best_val_acc = 0.0
+    best_val_f1 = 0.0
 
     for epoch in range(num_epochs):
         probe.train()
@@ -180,11 +183,14 @@ def train_probe(
                 correct += (predicted.squeeze() == labels).sum().item()
 
         val_acc = 100 * correct / total
+        f1 = f1_score(labels.cpu().numpy(), predicted.squeeze().cpu().numpy())
         print(f"Epoch [{epoch+1}/{num_epochs}], Validation Accuracy: {val_acc:.2f}%")
         best_val_acc = max(best_val_acc, val_acc)  # Keep track of best acc
+        best_val_f1 = max(best_val_f1, f1)
 
         if use_wandb:
             wandb.log({"val_acc": val_acc}, step=step_offset + epoch)
+            wandb.log({"val_f1": f1}, step=step_offset + epoch)
 
     # Save the trained linear probe
     save_dir = os.path.join(output_dir, model_id.split("/")[-1])
@@ -205,7 +211,7 @@ def train_probe(
     if use_wandb:
         wandb.log({f"best_val_acc/{target_component}": best_val_acc})
 
-    return best_val_acc  # Return best validation accuracy over epochs
+    return best_val_acc, best_val_f1  # Return best validation accuracy over epochs
 
 
 # --- Main Function ---
@@ -324,6 +330,7 @@ def main(args):
     # Train Probes
     print("Starting probe training...")
     accuracies = {}
+    f1s = {}
     if args.activation_type == "mha":
         probe_input_dim = HEAD_DIM
     elif args.activation_type == "mlp":
@@ -344,7 +351,7 @@ def main(args):
             for head in range(NUM_HEADS):
                 target_component = f"{layer}_{head}"
                 step_offset = (layer * NUM_HEADS + head) * args.epochs
-                current_acc = train_probe(
+                current_acc, current_f1 = train_probe(
                     model,
                     processor,
                     train_dataset,
@@ -365,6 +372,7 @@ def main(args):
                     step_offset=step_offset,
                 )
                 accuracies[target_component] = current_acc
+                f1s[target_component] = current_f1
     elif args.activation_type == "mlp" or args.activation_type == "residual":
         for layer in range(NUM_LAYERS):
             target_component = f"{layer}"
@@ -401,6 +409,12 @@ def main(args):
     print(f"Saving accuracies to {acc_path}")
     with open(acc_path, "wb") as f:
         pickle.dump(accuracies, f)
+
+    f1_filename = f"{args.probe_type}_f1_dict_{args.activation_type}.pkl"
+    f1_path = os.path.join(output_subdir, f1_filename)
+    print(f"Saving accuracies to {f1_path}")
+    with open(f1_path, "wb") as f:
+        pickle.dump(f1s, f)
 
     if args.wandb:
         wandb.log(
