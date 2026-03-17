@@ -60,7 +60,7 @@ def get_probe_vectors(
                 )["net.2.weight"].squeeze()
             else:
                 current_probe = torch.load(
-                    f"probe/trained_probe_{concept}/{model_id}/{probe_type}_probe_{layer}_{head}.pth"
+                    f"trained_probe_{concept}/{model_id}/{probe_type}_probe_{layer}_{head}.pth"
                 )["linear.weight"].squeeze()
             if use_random_direction:
                 current_probe = torch.normal(
@@ -70,7 +70,7 @@ def get_probe_vectors(
                 )
             current_probe = current_probe / torch.norm(current_probe, p=2)
             current_std = torch.load(
-                f"probe/trained_probe_{concept}/{model_id}/{probe_type}_std_mha_{layer}_{head}.pt"
+                f"trained_probe_{concept}/{model_id}/{probe_type}_std_mha_{layer}_{head}.pt"
             )
             current_probe = scale * current_std * current_probe
             probes[layer][head * head_dim : head_dim * (head + 1)] = current_probe
@@ -130,13 +130,13 @@ def main():
 
     accuracies = pickle.load(
         open(
-            f"probe/trained_probe_{concept}/{model_id}/{args.probe_type}_accuracies_dict_mha.pkl",
+            f"trained_probe_{concept}/{model_id}/{args.probe_type}_accuracies_dict_mha.pkl",
             "rb",
         )
     )
     f1s = pickle.load(
         open(
-            f"probe/trained_probe_{concept}/{model_id}/{args.probe_type}_f1s_dict_mha.pkl",
+            f"trained_probe_{concept}/{model_id}/{args.probe_type}_f1s_dict_mha.pkl",
             "rb",
         )
     )
