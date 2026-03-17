@@ -136,7 +136,7 @@ def main():
     )
     f1s = pickle.load(
         open(
-            f"trained_probe_{concept}/{model_id}/{args.probe_type}_f1s_dict_mha.pkl",
+            f"trained_probe_{concept}/{model_id}/{args.probe_type}_f1_dict_mha.pkl",
             "rb",
         )
     )
