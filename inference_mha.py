@@ -134,6 +134,12 @@ def main():
             "rb",
         )
     )
+    f1s = pickle.load(
+        open(
+            f"probe/trained_probe_{concept}/{model_id}/{args.probe_type}_f1s_dict_mha.pkl",
+            "rb",
+        )
+    )
 
     # Set model parameters based on model type
     if "gemma" in str(type(model)).lower():
@@ -148,7 +154,7 @@ def main():
         HEAD_DIM = model.config.head_dim
 
     print(f"Getting top {k_heads} heads")
-    top_k_heads = get_top_k_keys(accuracies, k_heads)
+    top_k_heads = get_top_k_keys(f1s, k_heads)
     print(f"Top heads selected: {top_k_heads}")
 
     print(f"Creating probe vectors with scale {scale}")

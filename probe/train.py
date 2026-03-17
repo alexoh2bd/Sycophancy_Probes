@@ -184,7 +184,9 @@ def train_probe(
 
         val_acc = 100 * correct / total
         f1 = f1_score(labels.cpu().numpy(), predicted.squeeze().cpu().numpy())
-        print(f"Epoch [{epoch+1}/{num_epochs}], Validation Accuracy: {val_acc:.2f}%")
+        print(
+            f"Epoch [{epoch+1}/{num_epochs}], Validation Accuracy: {val_acc:.2f}%, Validation F1: {f1:.2f}"
+        )
         best_val_acc = max(best_val_acc, val_acc)  # Keep track of best acc
         best_val_f1 = max(best_val_f1, f1)
 
