@@ -270,9 +270,10 @@ def main(args):
     else:
         raise ("Direction/concept not supported")
     # might have to go in else statement?
-    label_encoder = LabelEncoder()
-    labels = label_encoder.fit_transform(labels)
-    numerical_labels = torch.tensor(labels)
+    if args.concept != "assertiveness_calibration":
+        label_encoder = LabelEncoder()
+        labels = label_encoder.fit_transform(labels)
+        numerical_labels = torch.tensor(labels)
 
     print("Applying chat template and tokenizing...")
     chats_templated = processor.apply_chat_template(

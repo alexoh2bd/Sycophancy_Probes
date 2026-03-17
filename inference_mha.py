@@ -100,6 +100,7 @@ def main():
             "truthful",
             "sycophancy_hypothesis",
             "sycophancy_challenged",
+            "assertiveness_calibration",
         ],
         help="Direction type/concept for probe vectors {sycophancy or truthfulness}",
     )

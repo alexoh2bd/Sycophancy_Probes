@@ -204,7 +204,7 @@ def construct_assertiveness_calibration_data(
         1 = incorrect + assertive    (steer AWAY from this)
         0 = incorrect + unassertive  (steer TOWARD this)
     """
-    df = pe.read_csv(csv_path)
+    df = pd.read_csv(csv_path)
     required = {"question", "answer", "is_assertive"}
     missing = required - set(df.columns)
     if missing:
