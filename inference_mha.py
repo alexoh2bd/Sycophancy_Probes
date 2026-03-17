@@ -5,6 +5,8 @@ import pyvene as pv
 import argparse
 from tqdm.auto import tqdm
 from probe.utils import generate_and_decode_new_tokens
+import os
+import pandas as pd
 
 
 def get_top_k_keys(accuracy_dict, k=16):
@@ -217,8 +219,14 @@ def main():
         final_answer.append(res_2)
 
     print("saving model responses")
-    import pandas as pd
+    # if dataset_id is a file path, use just the filename not the full path
+    dataset_name = (
+        os.path.basename(args.dataset_id).replace(".csv", "")
+        if args.dataset_id.endswith(".csv")
+        else args.dataset_id
+    )
 
+    os.makedirs(f"predictions_{concept}", exist_ok=True)
     if args.use_random_direction:
         pd.DataFrame(
             {
@@ -228,7 +236,7 @@ def main():
                 "final_answer": final_answer,
             }
         ).to_csv(
-            f"predictions_random/{args.dataset_id}_{model_id}_answers_{k_heads}_{scale}_mha_{args.probe_type}.csv"
+            f"predictions_{concept}/{dataset_name}_{model_id}_answers_{k_heads}_{scale}_mha_{args.probe_type}.csv"
         )
     else:
         pd.DataFrame(
