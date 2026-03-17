@@ -248,7 +248,7 @@ def main():
                 "steered": final_answer,
             }
         ).to_csv(
-            f"predictions_{concept}/{args.dataset_id}_{model_id}_answers_{k_heads}_{scale}_mha_{args.probe_type}.csv"
+            f"predictions_{concept}/{dataset_name}_{model_id}_answers_{k_heads}_{scale}_mha_{args.probe_type}.csv"
         )
 
 
