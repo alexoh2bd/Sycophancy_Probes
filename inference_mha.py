@@ -201,15 +201,17 @@ def main():
     pv_model = pv.IntervenableModel(target_components, model=model)
     print(f"Type: {type(model)}")
 
-    print(f"Loading {args.dataset_id} dataset")
-    questions_test, correct_answers_test = load_test_data(args.dataset_id)
+    # print(f"Loading {args.dataset_id} dataset")
+    questions_test, correct_answers_test, incorrect_answers_test = load_test_data(
+        args.dataset_id
+    )
 
     print("Generating answers for test questions")
     initial_answer = []
     final_answer = []
     for question in tqdm(questions_test):
         res_1, res_2 = generate_and_decode_new_tokens(
-            question, pv_model, processor, model_id
+            question, pv_model, processor, model_id, concept=args.concept
         )
         initial_answer.append(res_1)
         final_answer.append(res_2)
@@ -233,8 +235,9 @@ def main():
             {
                 "question": questions_test,
                 "correct_answer": correct_answers_test,
-                "initial_answer": initial_answer,
-                "final_answer": final_answer,
+                "incorrect_answer": incorrect_answers_test,
+                "unsteered": initial_answer,
+                "steered": final_answer,
             }
         ).to_csv(
             f"predictions_{concept}/{args.dataset_id}_{model_id}_answers_{k_heads}_{scale}_mha_{args.probe_type}.csv"
