@@ -23,7 +23,7 @@ from utils import load_model
 
 # Assuming these utils are in the same directory or accessible via PYTHONPATH
 import probe_data_utils as probe_data_utils
-from probe.assertiveness_data_utils import construct_assertiveness_calibration_data
+from assertiveness_data_utils import construct_assertiveness_calibration_data
 import extract_activation
 from probe import LinearProbe, NonLinearProbe
 from probe_data_utils import construct_data
