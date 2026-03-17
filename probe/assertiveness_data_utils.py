@@ -205,7 +205,7 @@ def construct_assertiveness_calibration_data(
         0 = incorrect + unassertive  (steer TOWARD this)
     """
     df = pd.read_csv(csv_path)
-    required = {"question", "answer", "is_assertive"}
+    required = {"question", "response", "assertive"}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(
@@ -220,10 +220,10 @@ def construct_assertiveness_calibration_data(
         chat = [
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": row["question"]},
-            {"role": "assistant", "content": row["answer"]},
+            {"role": "assistant", "content": row["response"]},
         ]
         chats.append(chat)
-        labels.append(int(row["is_assertive"]))
+        labels.append(int(row["assertive"]))
 
     n_assertive = sum(labels)
     n_unassertive = len(labels) - n_assertive
