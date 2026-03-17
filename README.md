@@ -30,9 +30,13 @@ The project trains linear classifiers (probes) on activations extracted from dif
 │   ├── extract_activation.py       # Activation extraction utilities
 │   ├── compute_proj_std.py         # Projection std for scale × std × direction
 │   ├── inference_epint.py          # Assertiveness steering inference
-│   ├── evaluate_epint.py          # Score assertiveness of model outputs
+│   ├── evaluate_epint.py           # Score assertiveness of model outputs
 │   ├── plot_probe_heatmap.py       # R² heatmap visualization
 │   └── utils.py                    # load_model, load_ep_data, etc.
+│   ├── data_generation.py          # Generates training and test data from Truthful QA
+│   ├── check_assertiveness.py      # Adds assertiveness scores to training data based on model responses
+│   ├── evaluate_correctness.py     # Saves only incorrect steered and unsteered responses from test data
+│   ├── evaluate_assertiveness.py   # Evaluates assertiveness of incorrect steered and unsteered responses
 ├── inference_mha.py                # Sycophancy: MHA probe inference
 ├── inference_mlp.py                # MLP probe inference
 ├── inference_residual.py           # Residual probe inference
@@ -92,6 +96,28 @@ uv run python probe/plot_probe_heatmap.py --model_id gemma-3 --wandb
 uv run python probe/evaluate_epint.py --csv predictions_assertiveness/epint_gemma-3_k8_scale2.5.csv --wandb
 ```
 
+### New Assertiveness Pipeline (epistemic-integrity)
+
+```bash
+# 1. Train-test split of Truthful QA and generation of Gemma responses for training questions
+python data_generation.py
+
+# 2. Calculation of assertiveness scores for Gemma training question responses (reads from train_responses.csv)
+python check_assertiveness.py
+
+# 3. Run steering inference (scale < 0 steers down assertiveness)
+uv run python probe/inference_epint.py --model_id gemma-3 --k_heads 8 --scale 2.5 --wandb
+
+# 4. Plot R² heatmap
+uv run python probe/plot_probe_heatmap.py --model_id gemma-3 --wandb
+
+# 5. Extracts only incorrect steered and unsteered outputs from test questions (reads from test_data_gemma-3_answers_16_-5.0_mha_linear.csv & test_data.csv)
+python evaluate_correctness_.py
+
+# 6. Evaluate and compare assertiveness of steered and unsteered outputs from test questions (reads from final_steered.csv & final_unsteered.csv)
+python evaluate_assertiveness.py
+```
+
 ### SLURM Batch Jobs
 
 ```bash
@@ -129,13 +155,12 @@ sbatch run_train_inference_epint.sh
 ## Datasets
 
 - **Sycophancy**: [TruthfulQA](https://huggingface.co/datasets/truthfulqa/truthful_qa) — training/validation split 80/20
-- **Assertiveness**: `epistemic-integrity/scibert-finetuning/data/` — `train_data.csv` (90/10 split), `test_data.csv` (held-out)
+- **Assertiveness**: `epistemic-integrity/scibert-finetuning/data/` — `train_data.csv` (90/10 split), `test_data.csv` (held-out) (remove?)
 
 ## Model Support
 
 Currently tested with:
 - Google Gemma models (gemma-2, gemma-3)
-- Meta Llama models (Llama-3.2)
 
 The code is designed to be extensible to other transformer-based language models.
 
@@ -147,18 +172,24 @@ Interactive Jupyter notebooks are provided for:
 - `get_prediction.ipynb`: Analyzing model predictions
 - `plots.ipynb`: Creating custom visualizations
 
-## License
-
-[Add your license information here]
-
 ## Citation
 
-If you use this code in your research, please cite:
+Code adopted from:
 
 ```
-[Add citation information here]
+Sycophancy Hides Linearly in the Attention Heads (2026)
+arxiv Link: https://arxiv.org/html/2601.16644v1
+Repo: https://github.com/rifoagenadi/sycophancy
+```
+
+```
+Epistemic Integrity in Large Language Models (2025)
+arxiv Link: https://arxiv.org/html/2411.06528v2
+Repo: https://github.com/ComplexData-MILA/epistemic-integrity
 ```
 
 ## Contact
 
-[Add contact information here]
+Jenny Chen (janet.chen@duke.edu)
+Alex Oh (alex.oh@duke.edu)
+Rishika Randev (rishika.randev@duke.edu)
