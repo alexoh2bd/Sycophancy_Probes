@@ -23,10 +23,7 @@ from utils import load_model
 
 # Assuming these utils are in the same directory or accessible via PYTHONPATH
 import probe_data_utils as probe_data_utils
-from uncertainty_data_utils import (
-    construct_correctness_data,
-    construct_suppression_data,
-)
+from probe.assertiveness_data_utils import construct_assertiveness_calibration_data
 import extract_activation
 from probe import LinearProbe, NonLinearProbe
 from probe_data_utils import construct_data
@@ -263,18 +260,12 @@ def main(args):
         "sycophancy_hypothesis",
     ]:
         chats, labels = construct_data(ds_train, concept=args.concept)
-    elif args.concept == "uncertaint_correctness":
-        chats, labels = construct_correctness_data(
-            ds_train, model=model, processor=processor
-        )
-    elif args.concept == "suppression":
+    elif args.concept == "assertiveness_calibration":
         if not args.scored_csv:
-            raise ValueError("--scored_csv required for --concept suppression")
-        chats, labels = construct_suppression_data(
-            args.scored_csv,
-            uncertainty_threshold=args.uncertainty_threshold,
-            assertiveness_threshold=args.assertiveness_threshold,
-        )
+            raise ValueError(
+                "--scored_csv required for --concept assertiveness_calibration"
+            )
+        chats, labels = construct_assertiveness_calibration_data(args.scored_csv)
         numerical_labels = torch.tensor(labels)
     else:
         raise ("Direction/concept not supported")
@@ -457,8 +448,7 @@ if __name__ == "__main__":
             "truthful",
             "sycophancy_hypothesis",
             "sycophancy_challenged",
-            "uncertainty_correctness",
-            "suppression",
+            "assertiveness_calibration",
         ],
         help="Direction/concept to steer",
     )
@@ -468,18 +458,7 @@ if __name__ == "__main__":
         default=None,
         help="Path to scored csv. required for --concept suppression",
     )
-    parser.add_argument(
-        "--uncertainty_threshold",
-        type=float,
-        default=0.5,
-        help="max sampling accuracy to keep as uncertain example",
-    )
-    parser.add_argument(
-        "--assertiveness_threshold",
-        type=float,
-        default=5.0,
-        help="Min assertiveness score to label miscalibrated",
-    )
+
     parser.add_argument(
         "--device",
         type=str,

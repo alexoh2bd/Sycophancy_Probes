@@ -186,79 +186,52 @@ structure so train.py's tokenization works identically.
 """
 
 
-def construct_suppression_data(
-    scored_csv_path: str,
-    uncertainty_threshold: float = 0.5,
-    assertiveness_threshold: float = 5.0,
+def construct_assertiveness_calibration_data(
+    csv_path: str,
 ) -> tuple[list, list]:
     """
     Parameters
     ----------
-    scored_csv_path : str
-        Path to the CSV your partner produces.
-        Required columns: question, accuracy, answer, assertiveness_score
-
-    uncertainty_threshold : float
-        Keep only rows where accuracy < this value.
-        0.5 means "model gets it right less than half the time" = uncertain.
-        Adjust based on your data distribution.
-
-    assertiveness_threshold : float
-        Split uncertain examples:
-            assertiveness_score >= threshold → label 1 (miscalibrated)
-            assertiveness_score <  threshold → label 0 (calibrated)
+    csv_path : str
+        Path to partner's CSV.
+        Required columns: question, answer, is_assertive
+        All rows should be incorrect model answers.
 
     Returns
     -------
-    chats  : list of chat dicts  — same format as construct_data() returns
-    labels : list of int         — 1 = miscalibrated, 0 = calibrated
+    chats  : list of chat dicts  — matches to_message() 'truthful' format
+    labels : list of int
+        1 = incorrect + assertive    (steer AWAY from this)
+        0 = incorrect + unassertive  (steer TOWARD this)
     """
-    df = pd.read_csv(scored_csv_path)
-
-    required = {"question", "accuracy", "answer", "assertiveness_score"}
+    df = pe.read_csv(csv_path)
+    required = {"question", "answer", "is_assertive"}
     missing = required - set(df.columns)
     if missing:
-        raise ValueError(f"CSV missing columns: {missing}")
-
-    # keep only uncertain examples
-    uncertain = df[df["accuracy"] < uncertainty_threshold].copy()
-    print(f"Total examples: {len(df)}")
-    print(f"Uncertain (accuracy < {uncertainty_threshold}): {len(uncertain)}")
-    print(f"Dropped (model was confident): {len(df) - len(uncertain)}")
+        raise ValueError(
+            f"Missing required columns: {missing}\n"
+            f"Found columns: {list(df.columns)}"
+        )
 
     chats = []
     labels = []
 
-    for _, row in uncertain.iterrows():
-        question = row["question"]
-        answer = row["answer"]
-
-        # build chat in the same format as probe_data_utils.to_message()
-        # using the 'truthful' template since it's the simplest —
-        # just question + answer, no challenge turn needed
+    for _, row in df.iterrows():
         chat = [
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": question},
-            {"role": "assistant", "content": answer},
+            {"role": "user", "content": row["question"]},
+            {"role": "assistant", "content": row["answer"]},
         ]
-
         chats.append(chat)
+        labels.append(int(row["is_assertive"]))
 
-        if row["assertiveness_score"] >= assertiveness_threshold:
-            labels.append(1)  # miscalibrated — uncertain inside, confident outside
-        else:
-            labels.append(0)  # calibrated    — uncertain inside, hedged outside
-
-    n_misc = sum(labels)
-    n_cal = len(labels) - n_misc
-    print(f"\nMiscalibrated (label 1): {n_misc}")
-    print(f"Calibrated    (label 0): {n_cal}")
-    print(f"Class balance: {n_misc/max(len(labels),1):.1%} miscalibrated")
-
-    if n_misc == 0 or n_cal == 0:
-        print("WARNING: one class is empty.")
-        print("  If all miscalibrated: lower assertiveness_threshold")
-        print("  If all calibrated:    raise assertiveness_threshold")
-        print("  If too few examples:  raise uncertainty_threshold")
-
+    n_assertive = sum(labels)
+    n_unassertive = len(labels) - n_assertive
+    print(
+        f"\nAssertive + incorrect: {n_assertive}, Unassertive + incorrect: {n_unassertive}"
+    )
+    print(f"Total: {len(labels)}")
+    print(f"Class balance: {n_assertive / max(len(labels), 1):.1%} assertive")
+    if n_assertive == 0 or n_assertive == 0:
+        print("WARNING: one class is empty, check is_assertive column values")
     return chats, labels
