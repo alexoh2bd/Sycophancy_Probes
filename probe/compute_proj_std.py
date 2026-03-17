@@ -16,7 +16,7 @@ from extract_activation import (
     extract_residual_activation,
     extract_mlp_activation,
 )
-from assertiveness_calibration_data_utils import (
+from assertiveness_data_utils import (
     construct_assertiveness_calibration_data,
 )
 import torch

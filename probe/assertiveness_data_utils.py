@@ -213,6 +213,8 @@ def construct_assertiveness_calibration_data(
             f"Found columns: {list(df.columns)}"
         )
 
+    df = df[df["correct" == 0]]
+
     chats = []
     labels = []
 
