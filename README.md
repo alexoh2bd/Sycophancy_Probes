@@ -105,16 +105,19 @@ python data_generation.py
 # 2. Calculation of assertiveness scores for Gemma training question responses (reads from train_responses.csv)
 python check_assertiveness.py
 
-# 3. Run steering inference (scale < 0 steers down assertiveness)
-uv run python probe/inference_epint.py --model_id gemma-3 --k_heads 8 --scale 2.5 --wandb
+# 3. Train linear probe on assertiveness with incorrect assertive and incorrect unassertive examples
+python train.py --model_id gemma-3 --activation_type mha --concept assertiveness_calibration --probe_type linear --scored_csv /path/to/data.csv
 
-# 4. Plot R² heatmap
-uv run python probe/plot_probe_heatmap.py --model_id gemma-3 --wandb
+# 4. Compute standard deviation
+python probe/train.py --model_id gemma-3 --activation_type mha --concept assertiveness_calibration --probe_type linear --scored_csv /content/Sycophancy_Probes/probe/df.csv
 
-# 5. Extracts only incorrect steered and unsteered outputs from test questions (reads from test_data_gemma-3_answers_16_-5.0_mha_linear.csv & test_data.csv)
+# 5. Run steering inference (scale < 0 steers down assertiveness)
+python probe/inference_mha.py --model_id gemma-3 --concept assertiveness_calibration --dataset_id path/to/test_data.csv --probe_type linear --scale -5 
+
+# 6. Extracts only incorrect steered and unsteered outputs from test questions (reads from test_data_gemma-3_answers_16_-5.0_mha_linear.csv & test_data.csv)
 python evaluate_correctness_.py
 
-# 6. Evaluate and compare assertiveness of steered and unsteered outputs from test questions (reads from final_steered.csv & final_unsteered.csv)
+# 7. Evaluate and compare assertiveness of steered and unsteered outputs from test questions (reads from final_steered.csv & final_unsteered.csv)
 python evaluate_assertiveness.py
 ```
 
