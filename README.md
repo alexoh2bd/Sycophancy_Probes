@@ -108,8 +108,8 @@ python check_assertiveness.py
 # 3. Train linear probe on assertiveness with incorrect assertive and incorrect unassertive examples
 python train.py --model_id gemma-3 --activation_type mha --concept assertiveness_calibration --probe_type linear --scored_csv /path/to/data.csv
 
-# 4. Compute standard deviation
-python probe/train.py --model_id gemma-3 --activation_type mha --concept assertiveness_calibration --probe_type linear --scored_csv /content/Sycophancy_Probes/probe/df.csv
+# 4. Compute standard deviation of activations to project onto steering
+python probe/compute_project_std.py --model_id gemma-3 --activation_type mha --concept assertiveness_calibration --probe_type linear --scored_csv /path/to/data.csv
 
 # 5. Run steering inference (scale < 0 steers down assertiveness)
 python probe/inference_mha.py --model_id gemma-3 --concept assertiveness_calibration --dataset_id path/to/test_data.csv --probe_type linear --scale -5 
